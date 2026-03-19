@@ -1,0 +1,6 @@
+{
+    "appId": "com.listaatividades.app",
+    "appName": "Lista de Atividades",
+    "webDir": "www",
+    "bundledWebRuntime": false
+}

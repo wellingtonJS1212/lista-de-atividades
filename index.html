@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07111f">
+    <meta name="description" content="Lista de atividades com lembretes visuais e contagem regressiva.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Lista de Atividades</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="app">
+        <section class="card">
+            <p class="eyebrow">Organize seu dia</p>
+            <h1>Minha lista de tarefas</h1>
+            <p class="subtitle">Adicione tarefas e escolha em quantos minutos deseja receber o lembrete.</p>
+
+            <div class="input-group">
+                <label class="sr-only" for="task-input">Digite sua tarefa</label>
+                <input id="task-input" type="text" placeholder="Digite sua tarefa">
+                <button id="add-task-button" type="button">Adicionar</button>
+            </div>
+
+            <div class="reminder-group">
+                <label class="reminder-label" for="reminder-minutes">Lembrar em</label>
+                <input id="reminder-minutes" type="number" min="1" value="1" inputmode="numeric">
+                <span class="reminder-suffix">minuto(s)</span>
+            </div>
+
+            <p id="empty-message" class="empty-message">Nenhuma tarefa por enquanto. Crie uma e vamos testar o lembrete.</p>
+            <ul id="task-list" class="task-list" aria-live="polite"></ul>
+        </section>
+    </main>
+
+    <script src="scripts.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+NOME DO APP
+Lista de Atividades
+
+DESCRICAO CURTA
+Organize tarefas com lembretes visuais e contagem regressiva.
+
+DESCRICAO COMPLETA
+Lista de Atividades ajuda voce a organizar o dia com uma interface simples, moderna e objetiva.
+
+Crie tarefas rapidamente, defina em quantos minutos deseja ser lembrado e acompanhe uma contagem regressiva dentro de cada card.
+
+Quando o tempo estiver acabando, o app destaca visualmente a tarefa para chamar sua atencao sem poluir a experiencia.
+
+Recursos principais:
+- Criacao rapida de tarefas
+- Tempo de lembrete personalizavel
+- Contagem regressiva em tempo real
+- Destaque visual quando a tarefa esta perto de expirar
+- Interface limpa e pensada para celular
+
+Ideal para quem quer foco, praticidade e lembretes visuais sem complicacao.

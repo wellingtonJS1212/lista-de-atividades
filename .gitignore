@@ -1,0 +1,10 @@
+node_modules/
+android/
+www/
+icons/
+assets/icon.png
+assets/logo.png
+android/app/release/
+android/keystore.properties
+*.jks
+*.keystore
