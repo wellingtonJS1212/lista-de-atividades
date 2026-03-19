@@ -1,10 +1,10 @@
 {
     "name": "lista-de-atividades-mobile",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "private": true,
     "description": "Aplicativo mobile da lista de atividades com lembretes visuais.",
     "scripts": {
-        "prepare:web": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -Path 'www' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'index.html' -Destination 'www/index.html' -Force; Copy-Item -Path 'style.css' -Destination 'www/style.css' -Force; Copy-Item -Path 'scripts.js' -Destination 'www/scripts.js' -Force; Copy-Item -Path 'manifest.webmanifest' -Destination 'www/manifest.webmanifest' -Force; if (Test-Path 'icons') { New-Item -Path 'www/icons' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'icons/*' -Destination 'www/icons' -Recurse -Force }\"",
+        "prepare:web": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -Path 'www' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'index.html' -Destination 'www/index.html' -Force; Copy-Item -Path 'style.css' -Destination 'www/style.css' -Force; Copy-Item -Path 'scripts.js' -Destination 'www/scripts.js' -Force; Copy-Item -Path 'backend-config.js' -Destination 'www/backend-config.js' -Force; Copy-Item -Path 'remote-api.js' -Destination 'www/remote-api.js' -Force; Copy-Item -Path 'admin.html' -Destination 'www/admin.html' -Force; Copy-Item -Path 'admin.css' -Destination 'www/admin.css' -Force; Copy-Item -Path 'admin.js' -Destination 'www/admin.js' -Force; Copy-Item -Path 'manifest.webmanifest' -Destination 'www/manifest.webmanifest' -Force; Copy-Item -Path 'update.json' -Destination 'www/update.json' -Force; if (Test-Path 'icons') { New-Item -Path 'www/icons' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'icons/*' -Destination 'www/icons' -Recurse -Force }\"",
         "build": "npm run prepare:web",
         "assets:generate": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"npx @capacitor/assets generate --assetPath assets --android --pwa --iconBackgroundColor '#07111f' --splashBackgroundColor '#07111f' --logoSplashScale 0.24\"",
         "mobile:refresh": "npm run assets:generate && npm run cap:sync:android",
@@ -19,7 +19,8 @@
     "dependencies": {
         "@capacitor/android": "^7.0.1",
         "@capacitor/cli": "^7.0.1",
-        "@capacitor/core": "^7.0.1"
+        "@capacitor/core": "^7.0.1",
+        "@supabase/supabase-js": "^2.99.2"
     },
     "devDependencies": {
         "@capacitor/assets": "^3.0.5"

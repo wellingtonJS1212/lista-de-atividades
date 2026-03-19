@@ -1,14 +1,16 @@
-# Lista de Atividades 1.0.0
+# Lista de Atividades 1.0.2
 
-Primeira versao publica do aplicativo Lista de Atividades para Android.
+Versao final refinada do aplicativo Lista de Atividades para Android.
 
 ## Destaques
 
-- Criacao de tarefas com interface simples
-- Lembretes visuais com tempo configuravel
-- Contagem regressiva em tempo real
-- Destaque visual para tarefas proximas do fim
-- Distribuicao em APK fora da Play Store
+- Tela inicial com nome, e-mail e senha salvos no aparelho
+- Recuperacao local de senha quando o usuario esquecer
+- Tarefas gravadas em maiusculas e com tempo obrigatorio
+- Som personalizado escolhido no proprio aparelho para o lembrete visual
+- Historico de tarefas finalizadas e nao finalizadas com opcao de retomar
+- Grafico de desempenho com visual melhorado e correcoes no historico das tarefas concluidas
+- Botao para fechar o app e refinamentos visuais na interface
 
 ## Arquivos
 

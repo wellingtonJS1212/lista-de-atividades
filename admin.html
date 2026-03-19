@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#07111f">
+    <meta name="description" content="Painel administrativo da Lista de Atividades.">
+    <title>Painel Admin - Lista de Atividades</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <main class="admin-shell">
+        <section id="admin-auth-screen" class="admin-card">
+            <p class="eyebrow">Administração</p>
+            <h1>Painel de controle</h1>
+            <p class="subtitle">Entre com um usuário administrador aprovado no Supabase.</p>
+
+            <div class="field-grid">
+                <label class="field">
+                    <span>E-mail</span>
+                    <input id="admin-email" type="email" placeholder="admin@exemplo.com" autocomplete="username">
+                </label>
+
+                <label class="field">
+                    <span>Senha</span>
+                    <input id="admin-password" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+                </label>
+            </div>
+
+            <p id="admin-feedback" class="feedback" hidden>Preencha seus dados para continuar.</p>
+
+            <div class="button-row">
+                <button id="admin-login-button" type="button">Entrar no painel</button>
+                <button id="admin-reset-button" class="secondary-button" type="button">Recuperar senha</button>
+            </div>
+        </section>
+
+        <section id="admin-panel" class="admin-panel" hidden>
+            <header class="admin-topbar">
+                <div>
+                    <p class="eyebrow">Controle remoto</p>
+                    <h2>Usuários, aprovações e feedback</h2>
+                </div>
+
+                <div class="button-row">
+                    <button id="admin-refresh-button" class="secondary-button" type="button">Atualizar dados</button>
+                    <button id="admin-logout-button" class="secondary-button" type="button">Sair</button>
+                </div>
+            </header>
+
+            <section class="summary-grid">
+                <article class="summary-card">
+                    <span class="summary-label">Aguardando aprovação</span>
+                    <strong id="pending-count">0</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Usuários aprovados</span>
+                    <strong id="approved-count">0</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Feedbacks recebidos</span>
+                    <strong id="feedback-count">0</strong>
+                </article>
+            </section>
+
+            <section class="panel-grid">
+                <section class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <p class="eyebrow">Acesso</p>
+                            <h3>Usuários cadastrados</h3>
+                        </div>
+                    </div>
+                    <ul id="users-list" class="data-list"></ul>
+                </section>
+
+                <section class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <p class="eyebrow">Escuta ativa</p>
+                            <h3>Feedbacks e sugestões</h3>
+                        </div>
+                    </div>
+                    <ul id="feedback-list" class="data-list"></ul>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script src="backend-config.js"></script>
+    <script src="remote-api.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

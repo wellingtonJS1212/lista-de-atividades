@@ -1,0 +1,255 @@
+:root {
+    --bg-start: #07111f;
+    --bg-end: #12091f;
+    --card-bg: rgba(9, 15, 28, 0.84);
+    --card-border: rgba(112, 244, 255, 0.16);
+    --panel-bg: rgba(255, 255, 255, 0.05);
+    --text-main: #f5f7fb;
+    --text-muted: #9cb0c9;
+    --accent: #49e6d0;
+    --accent-soft: #7ef2e1;
+    --danger: #ff6b81;
+    --warning: #ffb86b;
+    --shadow: 0 28px 70px rgba(0, 0, 0, 0.38);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
+    color: var(--text-main);
+    background:
+        radial-gradient(circle at top left, rgba(73, 230, 208, 0.16), transparent 30%),
+        linear-gradient(145deg, var(--bg-start), var(--bg-end));
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+button,
+input {
+    font: inherit;
+    border: none;
+    border-radius: 18px;
+}
+
+button {
+    padding: 14px 18px;
+    background: linear-gradient(135deg, var(--accent), #8cf6df);
+    color: #03151a;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.secondary-button {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+input {
+    width: 100%;
+    padding: 16px 18px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    outline: 2px solid transparent;
+}
+
+input:focus {
+    outline-color: var(--accent);
+}
+
+.admin-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+.admin-card,
+.panel-card,
+.summary-card,
+.admin-panel {
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
+}
+
+.admin-card {
+    max-width: 620px;
+    margin: 40px auto;
+    padding: 32px;
+    border-radius: 30px;
+}
+
+.admin-panel {
+    padding: 28px;
+    border-radius: 30px;
+}
+
+.eyebrow,
+.summary-label,
+.field span {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+    margin-top: 0;
+}
+
+.subtitle,
+.feedback,
+.meta-line,
+.empty-text {
+    color: var(--text-muted);
+}
+
+.field-grid,
+.summary-grid,
+.panel-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+}
+
+.button-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.feedback.error {
+    color: #ffd5db;
+}
+
+.admin-topbar,
+.panel-header,
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 24px 0;
+}
+
+.summary-card,
+.panel-card {
+    padding: 18px;
+    border-radius: 24px;
+}
+
+.summary-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 2rem;
+}
+
+.panel-grid {
+    grid-template-columns: 1.1fr 0.9fr;
+}
+
+.data-list {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.data-item {
+    padding: 16px;
+    border-radius: 20px;
+    background: var(--panel-bg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.item-main {
+    display: grid;
+    gap: 6px;
+}
+
+.item-title {
+    font-weight: 800;
+}
+
+.meta-line {
+    font-size: 0.9rem;
+}
+
+.badge-row,
+.action-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.badge.pending {
+    background: rgba(255, 184, 107, 0.15);
+    color: #ffd8a3;
+}
+
+.badge.approved {
+    background: rgba(73, 230, 208, 0.15);
+    color: var(--accent-soft);
+}
+
+.badge.blocked {
+    background: rgba(255, 107, 129, 0.15);
+    color: #ffd5db;
+}
+
+.badge.rating {
+    background: rgba(107, 230, 255, 0.12);
+    color: #a9f3ff;
+}
+
+@media (max-width: 900px) {
+    .summary-grid,
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-card,
+    .admin-panel {
+        padding: 22px;
+        border-radius: 24px;
+    }
+
+    .button-row,
+    .admin-topbar,
+    .panel-header,
+    .item-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
