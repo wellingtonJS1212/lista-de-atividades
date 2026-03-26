@@ -1,26 +1,30 @@
 {
     "name": "lista-de-atividades-mobile",
-    "version": "1.0.2",
+    "version": "1.0.5",
     "private": true,
     "description": "Aplicativo mobile da lista de atividades com lembretes visuais.",
     "scripts": {
-        "prepare:web": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -Path 'www' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'index.html' -Destination 'www/index.html' -Force; Copy-Item -Path 'style.css' -Destination 'www/style.css' -Force; Copy-Item -Path 'scripts.js' -Destination 'www/scripts.js' -Force; Copy-Item -Path 'backend-config.js' -Destination 'www/backend-config.js' -Force; Copy-Item -Path 'remote-api.js' -Destination 'www/remote-api.js' -Force; Copy-Item -Path 'admin.html' -Destination 'www/admin.html' -Force; Copy-Item -Path 'admin.css' -Destination 'www/admin.css' -Force; Copy-Item -Path 'admin.js' -Destination 'www/admin.js' -Force; Copy-Item -Path 'manifest.webmanifest' -Destination 'www/manifest.webmanifest' -Force; Copy-Item -Path 'update.json' -Destination 'www/update.json' -Force; if (Test-Path 'icons') { New-Item -Path 'www/icons' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'icons/*' -Destination 'www/icons' -Recurse -Force }\"",
+        "prepare:web": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -Path 'www' -ItemType Directory -Force | Out-Null; New-Item -Path 'www/vendor' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'index.html' -Destination 'www/index.html' -Force; Copy-Item -Path 'style.css' -Destination 'www/style.css' -Force; Copy-Item -Path 'scripts.js' -Destination 'www/scripts.js' -Force; Copy-Item -Path 'native-sound-picker.js' -Destination 'www/native-sound-picker.js' -Force; Copy-Item -Path 'backend-config.js' -Destination 'www/backend-config.js' -Force; Copy-Item -Path 'remote-api.js' -Destination 'www/remote-api.js' -Force; Copy-Item -Path 'admin.html' -Destination 'www/admin.html' -Force; Copy-Item -Path 'admin.css' -Destination 'www/admin.css' -Force; Copy-Item -Path 'admin.js' -Destination 'www/admin.js' -Force; Copy-Item -Path 'node_modules/jspdf/dist/jspdf.umd.min.js' -Destination 'www/vendor/jspdf.umd.min.js' -Force; Copy-Item -Path 'manifest.webmanifest' -Destination 'www/manifest.webmanifest' -Force; Copy-Item -Path 'update.json' -Destination 'www/update.json' -Force; if (Test-Path 'icons') { New-Item -Path 'www/icons' -ItemType Directory -Force | Out-Null; Copy-Item -Path 'icons/*' -Destination 'www/icons' -Recurse -Force }\"",
         "build": "npm run prepare:web",
         "assets:generate": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"npx @capacitor/assets generate --assetPath assets --android --pwa --iconBackgroundColor '#07111f' --splashBackgroundColor '#07111f' --logoSplashScale 0.24\"",
         "mobile:refresh": "npm run assets:generate && npm run cap:sync:android",
         "cap:sync": "npm run build && npx cap sync",
         "cap:add:android": "npm run build && npx cap add android",
         "cap:sync:android": "npm run build && npx cap sync android",
-        "android:normalize-assets": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$publicPath='android/app/src/main/assets/public'; if (Test-Path $publicPath) { Set-Content -Path ($publicPath + '/cordova.js') -Value '// Cordova bridge placeholder for Capacitor build.' -Encoding UTF8; Set-Content -Path ($publicPath + '/cordova_plugins.js') -Value 'window.cordova = window.cordova || {}; window.cordova.plugins = window.cordova.plugins || {};' -Encoding UTF8 }\"",
+        "android:normalize-assets": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$publicPath='android/app/src/main/assets/public'; if (Test-Path $publicPath) { Set-Content -Path ($publicPath + '/cordova.js') -Value '// Cordova bridge placeholder for Capacitor build.' -Encoding UTF8; Set-Content -Path ($publicPath + '/cordova_plugins.js') -Value 'window.cordova = window.cordova || {}; window.cordova.plugins = window.cordova.plugins || {};' -Encoding UTF8; New-Item -Path ($publicPath + '/vendor') -ItemType Directory -Force | Out-Null; Copy-Item -Path 'node_modules/jspdf/dist/jspdf.umd.min.js' -Destination ($publicPath + '/vendor/jspdf.umd.min.js') -Force; Copy-Item -Path 'index.html' -Destination ($publicPath + '/index.html') -Force; Copy-Item -Path 'scripts.js' -Destination ($publicPath + '/scripts.js') -Force; Copy-Item -Path 'style.css' -Destination ($publicPath + '/style.css') -Force }\"",
         "android": "npm run cap:sync:android && npx cap open android",
         "release:apk": "npm run cap:sync:android && npm run android:normalize-assets && powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location android; .\\gradlew.bat assembleRelease\"",
         "release:aab": "npm run cap:sync:android && npm run android:normalize-assets && powershell -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location android; .\\gradlew.bat bundleRelease\""
     },
     "dependencies": {
         "@capacitor/android": "^7.0.1",
+        "@capacitor/app": "^7.1.2",
         "@capacitor/cli": "^7.0.1",
         "@capacitor/core": "^7.0.1",
-        "@supabase/supabase-js": "^2.99.2"
+        "@capacitor/filesystem": "^7.1.8",
+        "@capacitor/local-notifications": "^7.0.6",
+        "@supabase/supabase-js": "^2.99.2",
+        "jspdf": "^4.2.1"
     },
     "devDependencies": {
         "@capacitor/assets": "^3.0.5"

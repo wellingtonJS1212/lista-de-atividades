@@ -1,16 +1,23 @@
 const authScreen = document.querySelector("#auth-screen");
 const appScreen = document.querySelector("#app-screen");
 const authNameInput = document.querySelector("#auth-name");
-const authLoginInput = document.querySelector("#auth-login");
 const authPasswordInput = document.querySelector("#auth-password");
 const authFeedback = document.querySelector("#auth-feedback");
 const startAppButton = document.querySelector("#start-app-button");
 const forgotPasswordButton = document.querySelector("#forgot-password-button");
 const logoutButton = document.querySelector("#logout-button");
 const exitAppButton = document.querySelector("#exit-app-button");
+const passwordModal = document.querySelector("#password-modal");
+const currentPasswordInput = document.querySelector("#current-password-input");
+const newPasswordInput = document.querySelector("#new-password-input");
+const confirmPasswordInput = document.querySelector("#confirm-password-input");
+const passwordModalFeedback = document.querySelector("#password-modal-feedback");
+const savePasswordButton = document.querySelector("#save-password-button");
+const cancelPasswordButton = document.querySelector("#cancel-password-button");
 const userDisplayName = document.querySelector("#user-display-name");
 const welcomeMessage = document.querySelector("#welcome-message");
 const input = document.querySelector("#task-input");
+const reminderHoursInput = document.querySelector("#reminder-hours");
 const reminderInput = document.querySelector("#reminder-minutes");
 const soundInput = document.querySelector("#sound-input");
 const soundPickerButton = document.querySelector("#sound-picker-button");
@@ -18,53 +25,88 @@ const selectedSoundName = document.querySelector("#selected-sound-name");
 const addButton = document.querySelector("#add-task-button");
 const clearTasksButton = document.querySelector("#clear-tasks-button");
 const clearHistoryButton = document.querySelector("#clear-history-button");
+const generateReportButton = document.querySelector("#generate-report-button");
+const reportMessage = document.querySelector("#report-message");
 const taskList = document.querySelector("#task-list");
 const historyList = document.querySelector("#history-list");
 const emptyMessage = document.querySelector("#empty-message");
 const historyEmptyMessage = document.querySelector("#history-empty-message");
 const taskCountBadge = document.querySelector("#task-count-badge");
 const taskSummaryLabel = document.querySelector("#task-summary-label");
+const completedTotal = document.querySelector("#completed-total");
+const unfinishedTotal = document.querySelector("#unfinished-total");
+const extendedTotal = document.querySelector("#extended-total");
+const availableTimeTotal = document.querySelector("#available-time-total");
+const plannedTimeTotal = document.querySelector("#planned-time-total");
+const freeTimeTotal = document.querySelector("#free-time-total");
 const formFeedback = document.querySelector("#form-feedback");
-const feedbackRatingInput = document.querySelector("#feedback-rating");
-const feedbackCategoryInput = document.querySelector("#feedback-category");
-const feedbackMessageInput = document.querySelector("#feedback-message");
-const feedbackFormMessage = document.querySelector("#feedback-form-message");
-const sendFeedbackButton = document.querySelector("#send-feedback-button");
-const updateBanner = document.querySelector("#update-banner");
+const dayStartHourSelect = document.querySelector("#day-start-hour");
+const dayStartMinuteSelect = document.querySelector("#day-start-minute");
+const dayEndHourSelect = document.querySelector("#day-end-hour");
+const dayEndMinuteSelect = document.querySelector("#day-end-minute");
+const updateModal = document.querySelector("#update-modal");
 const updateMessage = document.querySelector("#update-message");
 const updateLink = document.querySelector("#update-link");
+const dismissUpdateButton = document.querySelector("#dismiss-update-button");
+const clearHistoryModal = document.querySelector("#clear-history-modal");
+const confirmClearHistoryWithReportButton = document.querySelector("#confirm-clear-history-with-report");
+const confirmClearHistoryWithoutReportButton = document.querySelector("#confirm-clear-history-without-report");
 const tabButtons = document.querySelectorAll(".tab-button");
+const chartRangeButtons = document.querySelectorAll(".chart-range-button");
 const mainTab = document.querySelector("#main-tab");
 const historyTab = document.querySelector("#history-tab");
 const chartCanvas = document.querySelector("#performance-chart");
+const chartTooltip = document.querySelector("#chart-tooltip");
 
 const STORAGE_KEYS = {
     tasks: "lista-de-atividades:tarefas",
     history: "lista-de-atividades:historico",
+    performance: "lista-de-atividades:desempenho",
     user: "lista-de-atividades:usuario",
-    settings: "lista-de-atividades:configuracoes"
+    settings: "lista-de-atividades:configuracoes",
+    session: "lista-de-atividades:sessao"
 };
 
-const SESSION_KEY = "lista-de-atividades:sessao";
 const REMOTE_SESSION_KEY = "lista-de-atividades:remote-session";
+const DISMISSED_UPDATE_KEY = "lista-de-atividades:update-dispensada";
 const DEFAULT_REMINDER_MINUTES = 1;
 const COUNTDOWN_INTERVAL_IN_MS = 1000;
-const APP_VERSION = "1.0.2";
+const APP_VERSION = "1.0.5";
 const UPDATE_INFO_URL = "https://wellingtonjs1212.github.io/lista-de-atividades/update.json";
+const DOWNLOAD_PAGE_URL = "https://wellingtonJS1212.github.io/lista-de-atividades/download.html";
+const JSPDF_SOURCE_PATHS = [
+    "vendor/jspdf.umd.min.js",
+    "node_modules/jspdf/dist/jspdf.umd.min.js"
+];
+const NOTIFICATION_CHANNEL_ID = "task-reminders-v3";
 
 let tasks = loadTasks();
 let historyEntries = loadHistory();
+let performanceEntries = loadPerformanceHistory();
 let userProfile = loadUserProfile();
 let appSettings = loadSettings();
 let activeSession = loadSession();
 let remoteSession = loadRemoteSession();
 let selectedTab = "main";
 let countdownIntervalId = null;
+let pendingPasswordResetLogin = "";
+let selectedChartRangeDays = 7;
+let chartInteractionData = null;
+let jsPdfLoaderPromise = null;
+let notificationsReady = false;
+let activeReminderAudio = null;
+let activeReminderAudioContext = null;
 const reminderTimeouts = new Map();
 const remoteAuthEnabled = Boolean(window.RemoteApi?.isConfigured());
+const localNotificationsPlugin = window.Capacitor?.registerPlugin
+    ? window.Capacitor.registerPlugin("LocalNotifications")
+    : null;
 
+syncPerformanceHistory();
 syncSession();
+populateDayTimeSelects();
 renderApp();
+initLocalNotifications();
 schedulePendingReminders();
 startCountdownUpdater();
 checkForUpdates();
@@ -73,11 +115,14 @@ startAppButton.addEventListener("click", handleAuth);
 forgotPasswordButton.addEventListener("click", handleForgotPassword);
 logoutButton.addEventListener("click", logout);
 exitAppButton.addEventListener("click", closeApp);
+savePasswordButton.addEventListener("click", saveNewPassword);
+cancelPasswordButton.addEventListener("click", closePasswordModal);
 addButton.addEventListener("click", addTask);
 clearTasksButton.addEventListener("click", clearTasks);
-clearHistoryButton.addEventListener("click", clearHistory);
+clearHistoryButton.addEventListener("click", promptClearHistory);
+generateReportButton.addEventListener("click", generateHistoryReport);
 soundInput.addEventListener("change", handleSoundSelection);
-sendFeedbackButton.addEventListener("click", submitFeedbackForm);
+dismissUpdateButton.addEventListener("click", dismissCurrentUpdate);
 soundPickerButton.addEventListener("click", () => soundInput.click());
 soundPickerButton.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -86,7 +131,62 @@ soundPickerButton.addEventListener("keydown", (event) => {
     }
 });
 
+passwordModal.addEventListener("click", (event) => {
+    if (event.target === passwordModal) {
+        closePasswordModal();
+        pendingPasswordResetLogin = "";
+    }
+});
+
+clearHistoryModal.addEventListener("click", (event) => {
+    if (event.target === clearHistoryModal) {
+        closeClearHistoryModal();
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !passwordModal.hidden) {
+        closePasswordModal();
+        pendingPasswordResetLogin = "";
+    }
+
+    if (event.key === "Escape" && updateModal && !updateModal.hidden) {
+        dismissCurrentUpdate();
+    }
+
+    if (event.key === "Escape" && clearHistoryModal && !clearHistoryModal.hidden) {
+        closeClearHistoryModal();
+    }
+});
+
+updateModal.addEventListener("click", (event) => {
+    if (event.target === updateModal) {
+        dismissCurrentUpdate();
+    }
+});
+
+confirmClearHistoryWithReportButton.addEventListener("click", async () => {
+    const pdfGenerated = await generateHistoryReport();
+
+    if (pdfGenerated) {
+        performClearHistory();
+    }
+
+    closeClearHistoryModal();
+});
+
+confirmClearHistoryWithoutReportButton.addEventListener("click", () => {
+    performClearHistory();
+    closeClearHistoryModal();
+});
+
 input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        addTask();
+    }
+});
+
+reminderHoursInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
         addTask();
     }
@@ -98,9 +198,28 @@ reminderInput.addEventListener("keydown", (event) => {
     }
 });
 
+dayStartHourSelect.addEventListener("change", handleDayPlanChange);
+dayStartMinuteSelect.addEventListener("change", handleDayPlanChange);
+dayEndHourSelect.addEventListener("change", handleDayPlanChange);
+dayEndMinuteSelect.addEventListener("change", handleDayPlanChange);
+
 tabButtons.forEach((button) => {
     button.addEventListener("click", () => switchTab(button.dataset.tab));
 });
+
+chartRangeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        selectedChartRangeDays = Number.parseInt(button.dataset.range, 10) || 7;
+        updateChartRangeButtons();
+        drawPerformanceChart();
+    });
+});
+
+chartCanvas.addEventListener("mousemove", handleChartPointerMove);
+chartCanvas.addEventListener("mouseleave", hideChartTooltip);
+chartCanvas.addEventListener("click", handleChartPointerMove);
+chartCanvas.addEventListener("touchstart", handleChartTouch, { passive: true });
+window.addEventListener("scroll", hideChartTooltip, { passive: true });
 
 function renderApp() {
     const isAuthenticated = remoteAuthEnabled
@@ -117,11 +236,9 @@ function renderApp() {
 
     updateUserHeader();
     updateSoundLabel();
-    sendFeedbackButton.disabled = !remoteAuthEnabled;
-    feedbackMessageInput.disabled = !remoteAuthEnabled;
-    feedbackRatingInput.disabled = !remoteAuthEnabled;
-    feedbackCategoryInput.disabled = !remoteAuthEnabled;
-    switchTab(selectedTab);
+    updateDayPlanInputs();
+    updateChartRangeButtons();
+    switchTab(selectedTab, false);
     renderTasks();
     renderHistory();
     drawPerformanceChart();
@@ -133,23 +250,16 @@ function hydrateAuthForm() {
     }
 
     authNameInput.value = userProfile.name;
-    authLoginInput.value = userProfile.login;
     authPasswordInput.value = "";
 }
 
 async function handleAuth() {
     const name = authNameInput.value.trim();
-    const login = authLoginInput.value.trim().toLowerCase();
+    const login = name.toLowerCase();
     const password = authPasswordInput.value.trim();
 
-    if (!name || !login || !password) {
-        showFeedback(authFeedback, "Preencha nome, login e senha para continuar.");
-        return;
-    }
-
-    if (!isValidEmail(login)) {
-        showFeedback(authFeedback, "Informe um e-mail válido para acessar o aplicativo.");
-        authLoginInput.focus();
+    if (!name || !password) {
+        showFeedback(authFeedback, "Preencha nome e senha para continuar.");
         return;
     }
 
@@ -210,11 +320,12 @@ async function handleAuth() {
     if (!userProfile) {
         userProfile = { name, login, password };
         saveUserProfile();
-    } else if (userProfile.login !== login || userProfile.password !== password) {
-        showFeedback(authFeedback, "Login ou senha incorretos.");
+    } else if (userProfile.password !== password) {
+        showFeedback(authFeedback, "Senha incorreta.");
         return;
-    } else if (userProfile.name !== name) {
+    } else {
         userProfile.name = name;
+        userProfile.login = login;
         saveUserProfile();
     }
 
@@ -223,65 +334,28 @@ async function handleAuth() {
         startedAt: Date.now()
     };
 
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(activeSession));
+    saveSession();
     authPasswordInput.value = "";
     hideFeedback(authFeedback);
     renderApp();
 }
 
 async function handleForgotPassword() {
-    const login = authLoginInput.value.trim().toLowerCase();
-
-    if (remoteAuthEnabled) {
-        if (!isValidEmail(login)) {
-            showFeedback(authFeedback, "Digite um e-mail válido para recuperar a senha.");
-            authLoginInput.focus();
-            return;
-        }
-
-        try {
-            await window.RemoteApi.requestPasswordReset(login);
-            showFeedback(authFeedback, "Enviamos as instruções de recuperação para o seu e-mail.");
-        } catch (error) {
-            showFeedback(authFeedback, parseRemoteError(error, "Não foi possível enviar a recuperação de senha."));
-        }
-        return;
-    }
-
     if (!userProfile) {
         showFeedback(authFeedback, "Nenhum usuário foi cadastrado ainda neste aparelho.");
         return;
     }
 
-    if (!isValidEmail(login)) {
-        showFeedback(authFeedback, "Digite o e-mail cadastrado para redefinir a senha.");
-        authLoginInput.focus();
-        return;
-    }
-
-    if (login !== userProfile.login) {
-        showFeedback(authFeedback, "O e-mail informado não corresponde ao usuário cadastrado.");
-        return;
-    }
-
-    const newPassword = window.prompt("Digite a nova senha para este usuário:");
-
-    if (!newPassword) {
-        return;
-    }
-
-    userProfile.password = newPassword.trim();
-    saveUserProfile();
-    showFeedback(authFeedback, "Senha redefinida com sucesso. Agora faça o login novamente.");
-    authPasswordInput.value = "";
-    authPasswordInput.focus();
+    pendingPasswordResetLogin = userProfile.login;
+    openPasswordModal();
 }
 
 function logout() {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(STORAGE_KEYS.session);
     localStorage.removeItem(REMOTE_SESSION_KEY);
     activeSession = null;
     remoteSession = null;
+    authPasswordInput.value = "";
     renderApp();
 }
 
@@ -299,6 +373,73 @@ function closeApp() {
     }
 
     window.close();
+}
+
+function openPasswordModal() {
+    passwordModal.hidden = false;
+    currentPasswordInput.value = "";
+    newPasswordInput.value = "";
+    confirmPasswordInput.value = "";
+    hideFeedback(passwordModalFeedback);
+    currentPasswordInput.focus();
+}
+
+function closePasswordModal() {
+    passwordModal.hidden = true;
+    currentPasswordInput.value = "";
+    newPasswordInput.value = "";
+    confirmPasswordInput.value = "";
+    hideFeedback(passwordModalFeedback);
+}
+
+function saveNewPassword() {
+    const currentPassword = currentPasswordInput.value.trim();
+    const newPassword = newPasswordInput.value.trim();
+    const confirmPassword = confirmPasswordInput.value.trim();
+    const expectedLogin = pendingPasswordResetLogin || (authNameInput.value.trim().toLowerCase());
+
+    if (!currentPassword) {
+        showFeedback(passwordModalFeedback, "Digite a senha atual para continuar.");
+        currentPasswordInput.focus();
+        return;
+    }
+
+    if (!newPassword) {
+        showFeedback(passwordModalFeedback, "Digite a nova senha para continuar.");
+        newPasswordInput.focus();
+        return;
+    }
+
+    if (!userProfile || expectedLogin !== userProfile.login) {
+        showFeedback(passwordModalFeedback, "Não foi possível validar o usuário para trocar a senha.");
+        return;
+    }
+
+    if (currentPassword !== userProfile.password) {
+        showFeedback(passwordModalFeedback, "A senha atual informada não confere.");
+        currentPasswordInput.focus();
+        return;
+    }
+
+    if (newPassword.length < 4) {
+        showFeedback(passwordModalFeedback, "A nova senha precisa ter pelo menos 4 caracteres.");
+        newPasswordInput.focus();
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showFeedback(passwordModalFeedback, "A confirmação da nova senha está diferente.");
+        confirmPasswordInput.focus();
+        return;
+    }
+
+    userProfile.password = newPassword;
+    saveUserProfile();
+    closePasswordModal();
+    pendingPasswordResetLogin = "";
+    showFeedback(authFeedback, "Senha redefinida com sucesso. Agora faça o login novamente.");
+    authPasswordInput.value = "";
+    authPasswordInput.focus();
 }
 
 function updateUserHeader() {
@@ -333,6 +474,7 @@ function addTask() {
         needsAttention: false,
         status: "active",
         extensionUsed: false,
+        extensionCount: 0,
         extensionAvailable: true,
         createdAt: Date.now()
     };
@@ -342,10 +484,11 @@ function addTask() {
     scheduleReminder(newTask);
     hideFeedback(formFeedback);
     input.value = "";
+    reminderHoursInput.value = "";
     reminderInput.value = "";
+    input.blur();
     renderTasks();
     drawPerformanceChart();
-    input.focus();
 }
 
 function renderTasks() {
@@ -373,7 +516,7 @@ function renderTasks() {
         meta.className = "task-meta";
         meta.innerHTML = `
             <span>Criada ${formatDateTime(task.createdAt)}</span>
-            <span>Lembrete em ${task.baseReminderMinutes} minuto(s)</span>
+            <span>Lembrete em ${formatReminderDuration(task.baseReminderMinutes)}</span>
             <span>${task.extensionUsed ? "Tempo extra já usado" : "Tempo extra disponível"}</span>
         `;
 
@@ -442,6 +585,8 @@ function renderTasks() {
 
 function renderHistory() {
     historyList.innerHTML = "";
+    reportMessage.textContent = "O relatório usa os dados salvos neste aparelho.";
+    generateReportButton.disabled = historyEntries.length === 0;
 
     historyEntries
         .slice()
@@ -465,12 +610,13 @@ function renderHistory() {
             meta.innerHTML = `
                 <span>Criada ${formatDateTime(entry.createdAt)}</span>
                 <span>Último registro ${formatDateTime(entry.updatedAt || entry.createdAt)}</span>
-                <span>Lembrete ${entry.baseReminderMinutes} minuto(s)</span>
+                <span>Lembrete ${formatReminderDuration(entry.baseReminderMinutes)}</span>
+                <span>${entry.extensionUsed ? "Precisou de mais tempo" : "Sem tempo extra"}</span>
             `;
 
             const status = document.createElement("span");
             status.className = `history-status ${entry.status}`;
-            status.textContent = entry.status === "completed" ? "Finalizada" : "Não finalizada";
+            status.textContent = getHistoryStatusText(entry.status);
 
             content.append(text, meta);
             header.append(content, status);
@@ -493,6 +639,11 @@ function renderHistory() {
         });
 
     historyEmptyMessage.hidden = historyEntries.length > 0;
+    clearHistoryButton.hidden = historyEntries.length === 0;
+
+    if (historyEntries.length === 0) {
+        reportMessage.textContent = "Adicione histórico para liberar o PDF.";
+    }
 }
 
 function completeTask(taskId) {
@@ -502,6 +653,7 @@ function completeTask(taskId) {
         return;
     }
 
+    stopReminderSound();
     clearReminder(task.id);
     addHistoryEntry(task, "completed");
     tasks = tasks.filter((currentTask) => currentTask.id !== taskId);
@@ -518,11 +670,13 @@ function extendTask(taskId) {
         return;
     }
 
+    stopReminderSound();
     task.extensionUsed = true;
     task.extensionAvailable = false;
     task.alerted = false;
     task.needsAttention = false;
     task.reminderAt = Date.now() + convertMinutesToMs(task.baseReminderMinutes);
+    task.extensionCount = (task.extensionCount || 0) + 1;
     saveTasks();
     scheduleReminder(task);
     renderTasks();
@@ -535,24 +689,47 @@ function deleteTask(taskId) {
         return;
     }
 
+    stopReminderSound();
     clearReminder(task.id);
+    addHistoryEntry(task, "deleted");
     tasks = tasks.filter((currentTask) => currentTask.id !== taskId);
     saveTasks();
+    renderHistory();
+    drawPerformanceChart();
     renderTasks();
 }
 
 function clearTasks() {
-    tasks.forEach((task) => clearReminder(task.id));
+    tasks.forEach((task) => {
+        clearReminder(task.id);
+
+        if (task.status === "active") {
+            addHistoryEntry(task, "deleted");
+        }
+    });
     tasks = [];
     saveTasks();
     renderTasks();
+    renderHistory();
+    drawPerformanceChart();
 }
 
-function clearHistory() {
+function promptClearHistory() {
+    if (!historyEntries.length) {
+        return;
+    }
+
+    clearHistoryModal.hidden = false;
+}
+
+function closeClearHistoryModal() {
+    clearHistoryModal.hidden = true;
+}
+
+function performClearHistory() {
     historyEntries = [];
     saveHistory();
     renderHistory();
-    drawPerformanceChart();
 }
 
 function resumeTask(historyId) {
@@ -571,7 +748,8 @@ function resumeTask(historyId) {
         alerted: false,
         needsAttention: false,
         status: "active",
-        extensionUsed: false,
+        extensionUsed: Boolean(entry.extensionUsed),
+        extensionCount: Number(entry.extensionCount || 0),
         extensionAvailable: true,
         createdAt: Date.now(),
         sourceHistoryId: historyId
@@ -590,17 +768,23 @@ function resumeTask(historyId) {
 }
 
 function addHistoryEntry(task, status) {
-    historyEntries.unshift({
+    const entry = {
         id: crypto.randomUUID(),
         text: task.text,
         status,
         createdAt: task.createdAt,
         updatedAt: Date.now(),
         baseReminderMinutes: task.baseReminderMinutes,
+        extensionUsed: Boolean(task.extensionUsed),
+        extensionCount: Number(task.extensionCount || 0),
         resumed: false
-    });
+    };
+
+    historyEntries.unshift(entry);
+    performanceEntries.unshift({ ...entry });
 
     saveHistory();
+    savePerformanceHistory();
 }
 
 function schedulePendingReminders() {
@@ -617,6 +801,7 @@ function scheduleReminder(task) {
     const delay = Math.max(task.reminderAt - Date.now(), 0);
     const timeoutId = window.setTimeout(() => handleReminder(task.id), delay);
     reminderTimeouts.set(task.id, timeoutId);
+    scheduleLocalNotification(task);
 }
 
 function handleReminder(taskId) {
@@ -629,6 +814,7 @@ function handleReminder(taskId) {
     }
 
     if (!task.extensionUsed) {
+        showTriggeredNotification(task);
         task.alerted = true;
         task.needsAttention = true;
         saveTasks();
@@ -637,6 +823,7 @@ function handleReminder(taskId) {
         return;
     }
 
+    showTriggeredNotification(task);
     task.alerted = true;
     task.needsAttention = false;
     task.status = "missed";
@@ -655,6 +842,8 @@ function clearReminder(taskId) {
         window.clearTimeout(timeoutId);
         reminderTimeouts.delete(taskId);
     }
+
+    cancelLocalNotification(taskId);
 }
 
 function startCountdownUpdater() {
@@ -687,14 +876,14 @@ function formatTimeLeft(task) {
     }
 
     if (task.needsAttention || task.alerted) {
-        return "Tempo encerrado para a tarefa criada";
+        return "Tempo encerrado.";
     }
 
     const totalSeconds = Math.max(Math.ceil((task.reminderAt - Date.now()) / 1000), 0);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
 
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} para a tarefa criada expirar`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")} restante`;
 }
 
 function applyCountdownState(task, taskItem, countdownElement) {
@@ -747,20 +936,44 @@ function getTaskStatusText(task) {
     return "Em andamento";
 }
 
+function getHistoryStatusText(status) {
+    if (status === "completed") {
+        return "Finalizada";
+    }
+
+    if (status === "deleted") {
+        return "Excluída";
+    }
+
+    return "Não finalizada";
+}
+
 function getReminderMinutes() {
-    const value = reminderInput.value.trim();
+    const hoursValue = reminderHoursInput.value.trim();
+    const minutesValue = reminderInput.value.trim();
 
-    if (!value) {
+    if (!hoursValue && !minutesValue) {
         return null;
     }
 
-    const reminderMinutes = Number.parseInt(value, 10);
+    const reminderHours = hoursValue ? Number.parseInt(hoursValue, 10) : 0;
+    const reminderMinutes = minutesValue ? Number.parseInt(minutesValue, 10) : 0;
 
-    if (!Number.isFinite(reminderMinutes) || reminderMinutes <= 0) {
+    if (!Number.isFinite(reminderHours) || reminderHours < 0) {
         return null;
     }
 
-    return reminderMinutes;
+    if (!Number.isFinite(reminderMinutes) || reminderMinutes < 0 || reminderMinutes > 59) {
+        return null;
+    }
+
+    const totalMinutes = reminderHours * 60 + reminderMinutes;
+
+    if (totalMinutes <= 0) {
+        return null;
+    }
+
+    return totalMinutes;
 }
 
 function handleSoundSelection(event) {
@@ -782,60 +995,88 @@ function handleSoundSelection(event) {
     reader.readAsDataURL(selectedFile);
 }
 
-async function submitFeedbackForm() {
-    const message = feedbackMessageInput.value.trim();
-    const rating = Number.parseInt(feedbackRatingInput.value, 10);
-    const category = feedbackCategoryInput.value;
-
-    if (!remoteAuthEnabled) {
-        showFeedback(feedbackFormMessage, "Ative o backend remoto para receber feedbacks dos usuários.");
-        return;
-    }
-
-    if (!remoteSession?.access_token || !userProfile?.login) {
-        showFeedback(feedbackFormMessage, "Entre na sua conta para enviar feedback.");
-        return;
-    }
-
-    if (!message) {
-        showFeedback(feedbackFormMessage, "Escreva sua mensagem antes de enviar.");
-        feedbackMessageInput.focus();
-        return;
-    }
-
-    try {
-        await window.RemoteApi.submitFeedback(remoteSession.access_token, {
-            user_id: remoteSession.user.id,
-            name: userProfile.name,
-            email: userProfile.login,
-            rating,
-            category,
-            message
-        });
-
-        hideFeedback(feedbackFormMessage);
-        feedbackMessageInput.value = "";
-        feedbackRatingInput.value = "5";
-        feedbackCategoryInput.value = "suggestion";
-        feedbackFormMessage.textContent = "Feedback enviado com sucesso. Obrigado pela sua contribuição.";
-        feedbackFormMessage.hidden = false;
-        feedbackFormMessage.classList.remove("error");
-    } catch (error) {
-        showFeedback(feedbackFormMessage, parseRemoteError(error, "Não foi possível enviar seu feedback agora."));
+function updateSoundLabel() {
+    if (appSettings.soundName) {
+        selectedSoundName.textContent = appSettings.soundName;
+        soundPickerButton.textContent = "Trocar ficheiro de áudio";
+    } else {
+        selectedSoundName.textContent = "Nenhum ficheiro selecionado";
+        soundPickerButton.textContent = "Escolher ficheiro de áudio";
     }
 }
 
-function updateSoundLabel() {
-    selectedSoundName.textContent = appSettings.soundName || "Som padrão do aparelho";
+
+function updateDayPlanInputs() {
+    const [startHour = "08", startMinute = "00"] = (appSettings.dayStartTime || "08:00").split(":");
+    const [endHour = "22", endMinute = "00"] = (appSettings.dayEndTime || "22:00").split(":");
+
+    dayStartHourSelect.value = startHour;
+    dayStartMinuteSelect.value = startMinute;
+    dayEndHourSelect.value = endHour;
+    dayEndMinuteSelect.value = endMinute;
+}
+
+function handleDayPlanChange() {
+    appSettings.dayStartTime = `${dayStartHourSelect.value || "08"}:${dayStartMinuteSelect.value || "00"}`;
+    appSettings.dayEndTime = `${dayEndHourSelect.value || "22"}:${dayEndMinuteSelect.value || "00"}`;
+    saveSettings();
+    drawPerformanceChart();
+}
+
+function populateDayTimeSelects() {
+    populateTimeSelect(dayStartHourSelect, 23);
+    populateTimeSelect(dayEndHourSelect, 23);
+    populateTimeSelect(dayStartMinuteSelect, 59);
+    populateTimeSelect(dayEndMinuteSelect, 59);
+}
+
+function populateTimeSelect(selectElement, maxValue) {
+    if (!selectElement || selectElement.options.length > 0) {
+        return;
+    }
+
+    for (let value = 0; value <= maxValue; value += 1) {
+        const option = document.createElement("option");
+        const label = String(value).padStart(2, "0");
+        option.value = label;
+        option.textContent = label;
+        selectElement.appendChild(option);
+    }
+}
+
+function stopReminderSound() {
+    if (activeReminderAudio) {
+        activeReminderAudio.pause();
+        activeReminderAudio.currentTime = 0;
+        activeReminderAudio = null;
+    }
+
+    if (activeReminderAudioContext) {
+        try {
+            activeReminderAudioContext.close();
+        } catch {
+            // Ignora erros ao fechar contexto de áudio.
+        }
+        activeReminderAudioContext = null;
+    }
 }
 
 async function playReminderSound() {
+    stopReminderSound();
+
     if (appSettings.soundDataUrl) {
         try {
             const audio = new Audio(appSettings.soundDataUrl);
+            activeReminderAudio = audio;
+            audio.addEventListener("ended", () => {
+                if (activeReminderAudio === audio) {
+                    activeReminderAudio = null;
+                }
+            });
             await audio.play();
             return;
         } catch {
+            activeReminderAudio = null;
             // Falha no áudio personalizado: segue para o som padrão.
         }
     }
@@ -845,13 +1086,14 @@ async function playReminderSound() {
 
 function playFallbackBeep() {
     try {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        const AudioContextClass = window.AudioContext;
 
         if (!AudioContextClass) {
             return;
         }
 
         const audioContext = new AudioContextClass();
+        activeReminderAudioContext = audioContext;
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -866,10 +1108,151 @@ function playFallbackBeep() {
         window.setTimeout(() => {
             oscillator.stop();
             audioContext.close();
+            if (activeReminderAudioContext === audioContext) {
+                activeReminderAudioContext = null;
+            }
         }, 350);
     } catch {
         // Sem suporte a áudio.
     }
+}
+
+async function initLocalNotifications() {
+    if (!localNotificationsPlugin) {
+        return false;
+    }
+
+    try {
+        await localNotificationsPlugin.createChannel({
+            id: NOTIFICATION_CHANNEL_ID,
+            name: "Lembretes de tarefas",
+            description: "Notificações das tarefas da Lista de Atividades",
+            importance: 5,
+            visibility: 1,
+            vibration: true
+        });
+    } catch {
+        // O canal pode já existir.
+    }
+
+    try {
+        const permissionStatus = await localNotificationsPlugin.checkPermissions();
+        let displayPermission = permissionStatus.display;
+
+        if (displayPermission !== "granted") {
+            const requestedPermission = await localNotificationsPlugin.requestPermissions();
+            displayPermission = requestedPermission.display;
+        }
+
+        notificationsReady = displayPermission === "granted";
+
+        if (notificationsReady) {
+            try {
+                const exactSetting = await localNotificationsPlugin.checkExactNotificationSetting();
+
+                if (exactSetting?.exactAlarm !== "granted") {
+                    await localNotificationsPlugin.requestExactNotificationSetting();
+                }
+            } catch {
+                // Não disponível nesta versão do Android.
+            }
+        }
+
+        return notificationsReady;
+    } catch {
+        notificationsReady = false;
+        return false;
+    }
+}
+
+async function scheduleLocalNotification(task) {
+    if (!localNotificationsPlugin) {
+        return;
+    }
+
+    const isReady = notificationsReady || await initLocalNotifications();
+
+    if (!isReady) {
+        return;
+    }
+
+    try {
+        await localNotificationsPlugin.schedule({
+            notifications: [
+                {
+                    id: getNotificationIdForTask(task.id),
+                    title: "Tempo encerrado",
+                    body: task.text,
+                    schedule: {
+                        at: new Date(task.reminderAt),
+                        allowWhileIdle: true
+                    },
+                    channelId: NOTIFICATION_CHANNEL_ID
+                }
+            ]
+        });
+    } catch {
+        // Se não conseguir agendar, o lembrete visual do app continua funcionando.
+    }
+}
+
+async function cancelLocalNotification(taskId) {
+    if (!localNotificationsPlugin) {
+        return;
+    }
+
+    try {
+        await localNotificationsPlugin.cancel({
+            notifications: [{ id: getNotificationIdForTask(taskId) }]
+        });
+    } catch {
+        // Segue sem falhar o fluxo principal.
+    }
+}
+
+async function showTriggeredNotification(task) {
+    if (!localNotificationsPlugin) {
+        return;
+    }
+
+    const isReady = notificationsReady || await initLocalNotifications();
+
+    if (!isReady) {
+        return;
+    }
+
+    try {
+        const notificationId = getNotificationIdForTask(task.id);
+
+        await localNotificationsPlugin.cancel({
+            notifications: [{ id: notificationId }]
+        });
+
+        await localNotificationsPlugin.schedule({
+            notifications: [
+                {
+                    id: notificationId,
+                    title: "Tempo encerrado",
+                    body: task.text,
+                    schedule: { at: new Date(Date.now() + 250), allowWhileIdle: true },
+                    channelId: NOTIFICATION_CHANNEL_ID
+                }
+            ]
+        });
+    } catch {
+        // O alerta visual e o som do app continuam funcionando.
+    }
+}
+
+function getNotificationIdForTask(taskId) {
+    let hash = 0;
+
+    for (let index = 0; index < taskId.length; index += 1) {
+        hash = ((hash << 5) - hash) + taskId.charCodeAt(index);
+        hash |= 0;
+    }
+
+    return Math.abs(hash) || Date.now() % 2147483647;
 }
 
 function drawPerformanceChart() {
@@ -883,7 +1266,7 @@ function drawPerformanceChart() {
         return;
     }
 
-    const { labels, completedValues, missedValues } = buildChartData();
+    const { labels, completedValues, unfinishedValues, plannedValues, completedPoints, unfinishedPoints, plannedPoints } = buildChartData();
     const dpr = window.devicePixelRatio || 1;
     const cssWidth = chartCanvas.clientWidth || 360;
     const cssHeight = 220;
@@ -898,7 +1281,16 @@ function drawPerformanceChart() {
     const bottom = height - 30;
     const usableHeight = bottom - padding;
     const stepX = labels.length > 1 ? (width - padding * 2) / (labels.length - 1) : 0;
-    const maxValue = Math.max(1, ...completedValues, ...missedValues);
+    const maxValue = Math.max(1, ...completedValues, ...unfinishedValues, ...plannedValues);
+
+    const summary = buildHistorySummary();
+    completedTotal.textContent = summary.completed;
+    unfinishedTotal.textContent = summary.unfinished;
+    extendedTotal.textContent = summary.extended;
+    const todayPlan = buildDayPlanSummary();
+    availableTimeTotal.textContent = formatCompactDuration(todayPlan.availableMinutes);
+    plannedTimeTotal.textContent = formatCompactDuration(todayPlan.plannedMinutes);
+    freeTimeTotal.textContent = formatCompactDuration(todayPlan.freeMinutes);
 
     context.clearRect(0, 0, width, height);
     context.fillStyle = "rgba(255, 255, 255, 0.03)";
@@ -913,10 +1305,17 @@ function drawPerformanceChart() {
         context.moveTo(padding, y);
         context.lineTo(width - padding, y);
         context.stroke();
+
+        const labelValue = Math.round(maxValue - (maxValue / 3) * index);
+        context.fillStyle = "rgba(156, 176, 201, 0.8)";
+        context.font = "11px Segoe UI";
+        context.textAlign = "left";
+        context.fillText(String(labelValue), 2, y + 4);
     }
 
     drawSeries(context, completedValues, stepX, padding, bottom, usableHeight, maxValue, "#49e6d0", "rgba(73, 230, 208, 0.16)");
-    drawSeries(context, missedValues, stepX, padding, bottom, usableHeight, maxValue, "#ff6b81", "rgba(255, 107, 129, 0.14)");
+    drawSeries(context, unfinishedValues, stepX, padding, bottom, usableHeight, maxValue, "#ff6b81", "rgba(255, 107, 129, 0.14)");
+    drawSeries(context, plannedValues, stepX, padding, bottom, usableHeight, maxValue, "#19b8ff", "rgba(25, 184, 255, 0.12)");
 
     context.fillStyle = "#9cb0c9";
     context.font = "12px Segoe UI";
@@ -929,8 +1328,19 @@ function drawPerformanceChart() {
 
     context.textAlign = "left";
     context.fillStyle = "rgba(156, 176, 201, 0.9)";
-    context.fillText(`Finalizadas: ${completedValues.reduce((sum, value) => sum + value, 0)}`, padding, 18);
-    context.fillText(`Não finalizadas: ${missedValues.reduce((sum, value) => sum + value, 0)}`, width - 150, 18);
+    context.fillText(`Finalizadas: ${summary.completed}`, padding, 18);
+    context.fillText(`Não finalizadas: ${summary.unfinished}`, width - 160, 18);
+
+    chartInteractionData = labels.map((label, index) => ({
+        label,
+        completed: completedValues[index],
+        unfinished: unfinishedValues[index],
+        planned: plannedValues[index],
+        plannedMinutes: plannedPoints[index].minutes,
+        completedPoint: completedPoints[index],
+        unfinishedPoint: unfinishedPoints[index],
+        plannedPoint: plannedPoints[index]
+    }));
 }
 
 function drawSeries(context, values, stepX, padding, bottom, usableHeight, maxValue, color, fillColor) {
@@ -991,24 +1401,35 @@ function buildChartData() {
     const today = new Date();
     const labels = [];
     const completedValues = [];
-    const missedValues = [];
+    const unfinishedValues = [];
+    const plannedValues = [];
+    const completedPoints = [];
+    const unfinishedPoints = [];
+    const plannedPoints = [];
 
-    for (let offset = 6; offset >= 0; offset -= 1) {
+    for (let offset = selectedChartRangeDays - 1; offset >= 0; offset -= 1) {
         const currentDate = new Date(today);
         currentDate.setDate(today.getDate() - offset);
         const dayKey = getLocalDateKey(currentDate);
 
         labels.push(currentDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }));
-        completedValues.push(countHistoryByDate(dayKey, "completed"));
-        missedValues.push(countHistoryByDate(dayKey, "missed"));
+        const completed = countHistoryByDate(dayKey, ["completed"]);
+        const unfinished = countHistoryByDate(dayKey, ["missed", "deleted"]);
+        const planned = getPlannedMinutesByDate(dayKey);
+        completedValues.push(completed);
+        unfinishedValues.push(unfinished);
+        plannedValues.push(Math.round(planned / 60));
+        completedPoints.push({ index: labels.length - 1, value: completed });
+        unfinishedPoints.push({ index: labels.length - 1, value: unfinished });
+        plannedPoints.push({ index: labels.length - 1, value: Math.round(planned / 60), minutes: planned });
     }
 
-    return { labels, completedValues, missedValues };
+    return { labels, completedValues, unfinishedValues, plannedValues, completedPoints, unfinishedPoints, plannedPoints };
 }
 
-function countHistoryByDate(dayKey, status) {
-    return historyEntries.filter((entry) => {
-        if (entry.status !== status) {
+function countHistoryByDate(dayKey, statuses) {
+    return performanceEntries.filter((entry) => {
+        if (!statuses.includes(entry.status)) {
             return false;
         }
 
@@ -1017,17 +1438,422 @@ function countHistoryByDate(dayKey, status) {
     }).length;
 }
 
-function switchTab(tabName) {
-    selectedTab = tabName === "history" ? "history" : "main";
+function buildHistorySummary() {
+    return {
+        completed: performanceEntries.filter((entry) => entry.status === "completed").length,
+        unfinished: performanceEntries.filter((entry) => entry.status === "missed" || entry.status === "deleted").length,
+        extended: performanceEntries.filter((entry) => entry.extensionUsed).length
+    };
+}
+
+function buildDayPlanSummary(date = new Date()) {
+    const dayKey = getLocalDateKey(date);
+    const availableMinutes = getAvailableMinutesForDay();
+    const plannedMinutes = getPlannedMinutesByDate(dayKey);
+    const freeMinutes = Math.max(availableMinutes - plannedMinutes, 0);
+
+    return {
+        dayKey,
+        availableMinutes,
+        plannedMinutes,
+        freeMinutes
+    };
+}
+
+function getPlannedMinutesByDate(dayKey) {
+    const plannedFromHistory = performanceEntries
+        .filter((entry) => getLocalDateKey(new Date(entry.createdAt)) === dayKey)
+        .reduce((total, entry) => total + getValidReminderMinutes(entry.baseReminderMinutes), 0);
+
+    const plannedFromActiveTasks = tasks
+        .filter((task) => getLocalDateKey(new Date(task.createdAt)) === dayKey)
+        .reduce((total, task) => total + getValidReminderMinutes(task.baseReminderMinutes), 0);
+
+    return plannedFromHistory + plannedFromActiveTasks;
+}
+
+function getAvailableMinutesForDay() {
+    const startMinutes = parseTimeToMinutes(appSettings.dayStartTime || "08:00");
+    const endMinutes = parseTimeToMinutes(appSettings.dayEndTime || "22:00");
+
+    if (startMinutes === null || endMinutes === null) {
+        return 14 * 60;
+    }
+
+    if (endMinutes <= startMinutes) {
+        return 24 * 60 - startMinutes + endMinutes;
+    }
+
+    return endMinutes - startMinutes;
+}
+
+function parseTimeToMinutes(value) {
+    if (typeof value !== "string" || !value.includes(":")) {
+        return null;
+    }
+
+    const [hoursPart, minutesPart] = value.split(":");
+    const hours = Number.parseInt(hoursPart, 10);
+    const minutes = Number.parseInt(minutesPart, 10);
+
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+        return null;
+    }
+
+    return hours * 60 + minutes;
+}
+
+function updateChartRangeButtons() {
+    chartRangeButtons.forEach((button) => {
+        button.classList.toggle("active", Number.parseInt(button.dataset.range, 10) === selectedChartRangeDays);
+    });
+}
+
+function handleChartPointerMove(event) {
+    if (!chartInteractionData || chartInteractionData.length === 0) {
+        return;
+    }
+
+    const rect = chartCanvas.getBoundingClientRect();
+    const clientX = event.clientX ?? event.touches?.[0]?.clientX;
+    const clientY = event.clientY ?? event.touches?.[0]?.clientY;
+
+    if (typeof clientX !== "number" || typeof clientY !== "number") {
+        return;
+    }
+
+    const localX = clientX - rect.left;
+    const nearestPoint = chartInteractionData.reduce((closest, current) => {
+        const currentDistance = Math.abs((current.completedPoint.index / Math.max(chartInteractionData.length - 1, 1)) * rect.width - localX);
+
+        if (!closest || currentDistance < closest.distance) {
+            return { data: current, distance: currentDistance };
+        }
+
+        return closest;
+    }, null);
+
+    if (!nearestPoint) {
+        hideChartTooltip();
+        return;
+    }
+
+    chartTooltip.innerHTML = `
+        <strong>${nearestPoint.data.label}</strong><br>
+        Finalizadas: ${nearestPoint.data.completed}<br>
+        Não finalizadas: ${nearestPoint.data.unfinished}<br>
+        Planejado: ${formatCompactDuration(nearestPoint.data.plannedMinutes)}
+    `;
+    chartTooltip.hidden = false;
+    chartTooltip.style.left = `${Math.min(localX + 16, rect.width - 170)}px`;
+    chartTooltip.style.top = `${Math.max(clientY - rect.top - 72, 8)}px`;
+}
+
+function handleChartTouch(event) {
+    handleChartPointerMove(event);
+}
+
+function hideChartTooltip() {
+    chartTooltip.hidden = true;
+}
+
+async function generateHistoryReport() {
+    if (!historyEntries.length) {
+        reportMessage.textContent = "Ainda não há histórico para gerar o PDF.";
+        return false;
+    }
+
+    const jsPdfNamespace = await ensureJsPdfLoaded();
+
+    if (!jsPdfNamespace?.jsPDF) {
+        reportMessage.textContent = "Não foi possível gerar o PDF agora.";
+        return false;
+    }
+
+    const { jsPDF } = jsPdfNamespace;
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const summary = buildHistorySummary();
+    const userName = userProfile?.name || "Usuário";
+    const createdAt = formatDateTime(Date.now());
+    let y = 18;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text("Relatório de atividades", 14, y);
+    y += 8;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.text(`Usuário: ${userName}`, 14, y);
+    y += 6;
+    pdf.text(`Emitido em: ${createdAt}`, 14, y);
+    y += 8;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Resumo", 14, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Finalizadas: ${summary.completed}`, 14, y);
+    y += 5;
+    pdf.text(`Não finalizadas: ${historyEntries.filter((entry) => entry.status === "missed").length}`, 14, y);
+    y += 5;
+    pdf.text(`Excluídas: ${historyEntries.filter((entry) => entry.status === "deleted").length}`, 14, y);
+    y += 5;
+    pdf.text(`Precisaram de mais tempo: ${summary.extended}`, 14, y);
+    y += 10;
+
+    const todayPlan = buildDayPlanSummary();
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Planejamento do dia", 14, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Começo do dia: ${appSettings.dayStartTime || "08:00"}`, 14, y);
+    y += 5;
+    pdf.text(`Hora de dormir: ${appSettings.dayEndTime || "22:00"}`, 14, y);
+    y += 5;
+    pdf.text(`Tempo disponível hoje: ${formatCompactDuration(todayPlan.availableMinutes)}`, 14, y);
+    y += 5;
+    pdf.text(`Tempo planejado hoje: ${formatCompactDuration(todayPlan.plannedMinutes)}`, 14, y);
+    y += 5;
+    pdf.text(`Tempo livre hoje: ${formatCompactDuration(todayPlan.freeMinutes)}`, 14, y);
+    y += 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Histórico completo", 14, y);
+    y += 6;
+    pdf.setFont("helvetica", "normal");
+
+    historyEntries
+        .slice()
+        .sort((entryA, entryB) => (entryA.updatedAt || entryA.createdAt) - (entryB.updatedAt || entryB.createdAt))
+        .forEach((entry, index) => {
+            const lines = [
+                `${index + 1}. ${entry.text}`,
+                `Status: ${getHistoryStatusText(entry.status)}`,
+                `Criada: ${formatDateTime(entry.createdAt)}`,
+                `Último registro: ${formatDateTime(entry.updatedAt || entry.createdAt)}`,
+                `Lembrete: ${formatReminderDuration(entry.baseReminderMinutes)}`,
+                `Mais tempo: ${entry.extensionUsed ? "Sim" : "Não"}`
+            ];
+
+            lines.forEach((line) => {
+                if (y > 275) {
+                    pdf.addPage();
+                    y = 18;
+                }
+
+                const wrappedLines = pdf.splitTextToSize(line, 180);
+                pdf.text(wrappedLines, 14, y);
+                y += wrappedLines.length * 5;
+            });
+
+            y += 4;
+        });
+
+    const fileSafeName = userName.toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "usuario";
+    const fileName = `relatorio-atividades-${fileSafeName}.pdf`;
+
+    try {
+        const pdfBlob = pdf.output("blob");
+        await triggerPdfDownload(pdfBlob, fileName);
+        reportMessage.textContent = window.Capacitor?.isNativePlatform?.()
+            ? `PDF salvo em Downloads › ${fileName}`
+            : "PDF gerado com sucesso.";
+        showPdfToast(fileName);
+        if (window.Capacitor?.isNativePlatform?.()) {
+            notifyPdfSaved(fileName);
+        }
+        return true;
+    } catch (pdfError) {
+        if (pdfError?.name === "AbortError") {
+            reportMessage.textContent = "Compartilhamento cancelado.";
+            return false;
+        }
+
+        reportMessage.textContent = "Não foi possível salvar o PDF.";
+        return false;
+    }
+}
+
+async function ensureJsPdfLoaded() {
+    if (window.jspdf?.jsPDF) {
+        return window.jspdf;
+    }
+
+    if (!jsPdfLoaderPromise) {
+        jsPdfLoaderPromise = (async () => {
+            for (const sourcePath of JSPDF_SOURCE_PATHS) {
+                try {
+                    await loadScriptResource(sourcePath);
+
+                    if (window.jspdf?.jsPDF) {
+                        return window.jspdf;
+                    }
+                } catch {
+                    // Tenta a próxima origem.
+                }
+            }
+
+            return null;
+        })();
+    }
+
+    return jsPdfLoaderPromise;
+}
+
+function loadScriptResource(sourcePath) {
+    return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(`script[data-dynamic-src="${sourcePath}"]`);
+
+        if (existingScript) {
+            if (existingScript.dataset.loaded === "true") {
+                resolve();
+                return;
+            }
+
+            existingScript.addEventListener("load", () => resolve(), { once: true });
+            existingScript.addEventListener("error", () => reject(new Error("Falha ao carregar script.")), { once: true });
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = sourcePath;
+        script.async = true;
+        script.dataset.dynamicSrc = sourcePath;
+        script.addEventListener("load", () => {
+            script.dataset.loaded = "true";
+            resolve();
+        }, { once: true });
+        script.addEventListener("error", () => reject(new Error("Falha ao carregar script.")), { once: true });
+        document.head.appendChild(script);
+    });
+}
+
+async function triggerPdfDownload(pdfBlob, fileName) {
+    if (window.Capacitor?.isNativePlatform?.()) {
+        const base64Data = await blobToBase64(pdfBlob);
+        const base64Content = base64Data.split(",")[1];
+        const { SystemSoundPicker } = window.Capacitor.Plugins;
+        await SystemSoundPicker.savePdfToDownloads({ data: base64Content, fileName });
+        return;
+    }
+
+    const downloadUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("Falha ao converter arquivo."));
+        reader.readAsDataURL(blob);
+    });
+}
+
+let pdfToastTimer = null;
+
+function showPdfToast(fileName) {
+    const toast = document.getElementById("pdf-toast");
+    const toastFilename = document.getElementById("pdf-toast-filename");
+    const openBtn = document.getElementById("pdf-toast-open");
+    const closeBtn = document.getElementById("pdf-toast-close");
+
+    if (!toast) return;
+
+    toastFilename.textContent = fileName;
+    toast.classList.remove("toast-hiding");
+    toast.hidden = false;
+
+    clearTimeout(pdfToastTimer);
+    pdfToastTimer = setTimeout(() => hidePdfToast(), 6000);
+
+    openBtn.style.display = window.Capacitor?.isNativePlatform?.() ? "" : "none";
+
+    openBtn.onclick = () => {
+        const { SystemSoundPicker } = window.Capacitor.Plugins;
+        SystemSoundPicker.openDownloadsFolder().catch(() => {});
+        hidePdfToast();
+    };
+
+    closeBtn.onclick = () => hidePdfToast();
+}
+
+function hidePdfToast() {
+    const toast = document.getElementById("pdf-toast");
+    if (!toast || toast.hidden) return;
+    toast.classList.add("toast-hiding");
+    clearTimeout(pdfToastTimer);
+    setTimeout(() => {
+        toast.hidden = true;
+        toast.classList.remove("toast-hiding");
+    }, 250);
+}
+
+async function notifyPdfSaved(fileName) {
+    if (!localNotificationsPlugin) return;
+
+    const isReady = notificationsReady || await initLocalNotifications();
+    if (!isReady) return;
+
+    try {
+        await localNotificationsPlugin.schedule({
+            notifications: [
+                {
+                    id: 999991,
+                    title: "PDF salvo com sucesso",
+                    body: `${fileName} salvo em Downloads`,
+                    schedule: { at: new Date(Date.now() + 500), allowWhileIdle: true },
+                    channelId: NOTIFICATION_CHANNEL_ID
+                }
+            ]
+        });
+    } catch {
+        // Silencia erros de notificação.
+    }
+}
+
+function switchTab(tabName, animate = true) {
+    const next = tabName === "history" ? "history" : "main";
+    if (next === selectedTab) return;
+
+    const leaving = selectedTab === "main" ? mainTab : historyTab;
+    const entering = next === "main" ? mainTab : historyTab;
+
+    selectedTab = next;
 
     tabButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.tab === selectedTab);
     });
 
-    mainTab.hidden = selectedTab !== "main";
-    historyTab.hidden = selectedTab !== "history";
-    mainTab.classList.toggle("active", selectedTab === "main");
-    historyTab.classList.toggle("active", selectedTab === "history");
+    if (!animate) {
+        leaving.hidden = true;
+        leaving.classList.remove("active");
+        entering.hidden = false;
+        entering.classList.add("active");
+        return;
+    }
+
+    leaving.classList.add("tab-leaving");
+
+    leaving.addEventListener("animationend", () => {
+        leaving.hidden = true;
+        leaving.classList.remove("active", "tab-leaving");
+
+        entering.hidden = false;
+        entering.classList.add("active", "tab-entering");
+
+        entering.addEventListener("animationend", () => {
+            entering.classList.remove("tab-entering");
+        }, { once: true });
+    }, { once: true });
 }
 
 function saveTasks() {
@@ -1069,6 +1895,7 @@ function normalizeTask(task) {
         needsAttention: Boolean(task.needsAttention),
         status: task.status === "missed" ? "missed" : "active",
         extensionUsed: Boolean(task.extensionUsed),
+        extensionCount: Number(task.extensionCount || 0),
         extensionAvailable: task.extensionAvailable !== false,
         createdAt: typeof task.createdAt === "number" ? task.createdAt : Date.now(),
         sourceHistoryId: typeof task.sourceHistoryId === "string" ? task.sourceHistoryId : null
@@ -1099,6 +1926,54 @@ function loadHistory() {
     }
 }
 
+function savePerformanceHistory() {
+    localStorage.setItem(STORAGE_KEYS.performance, JSON.stringify(performanceEntries));
+}
+
+function loadPerformanceHistory() {
+    const savedPerformance = localStorage.getItem(STORAGE_KEYS.performance);
+
+    if (!savedPerformance) {
+        return [];
+    }
+
+    try {
+        const parsedPerformance = JSON.parse(savedPerformance);
+
+        if (!Array.isArray(parsedPerformance)) {
+            return [];
+        }
+
+        return parsedPerformance.map(normalizeHistoryEntry).filter(Boolean);
+    } catch {
+        return [];
+    }
+}
+
+function syncPerformanceHistory() {
+    const now = Date.now();
+    const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+    const recentPerformanceEntries = performanceEntries.filter((entry) => {
+        const referenceTime = entry.updatedAt || entry.createdAt;
+        return now - referenceTime <= thirtyDaysInMs;
+    });
+
+    let hasChanges = recentPerformanceEntries.length !== performanceEntries.length;
+    performanceEntries = recentPerformanceEntries;
+
+    if (!performanceEntries.length && historyEntries.length) {
+        performanceEntries = historyEntries
+            .map((entry) => normalizeHistoryEntry(entry))
+            .filter(Boolean)
+            .filter((entry) => now - (entry.updatedAt || entry.createdAt) <= thirtyDaysInMs);
+        hasChanges = true;
+    }
+
+    if (hasChanges) {
+        savePerformanceHistory();
+    }
+}
+
 function normalizeHistoryEntry(entry) {
     if (!entry || typeof entry.text !== "string") {
         return null;
@@ -1107,10 +1982,12 @@ function normalizeHistoryEntry(entry) {
     return {
         id: typeof entry.id === "string" ? entry.id : crypto.randomUUID(),
         text: entry.text.toUpperCase(),
-        status: entry.status === "completed" ? "completed" : "missed",
+        status: entry.status === "completed" || entry.status === "deleted" ? entry.status : "missed",
         createdAt: typeof entry.createdAt === "number" ? entry.createdAt : Date.now(),
         updatedAt: typeof entry.updatedAt === "number" ? entry.updatedAt : Date.now(),
         baseReminderMinutes: getValidReminderMinutes(entry.baseReminderMinutes),
+        extensionUsed: Boolean(entry.extensionUsed),
+        extensionCount: Number(entry.extensionCount || 0),
         resumed: Boolean(entry.resumed)
     };
 }
@@ -1151,7 +2028,9 @@ function loadSettings() {
     if (!savedSettings) {
         return {
             soundName: "",
-            soundDataUrl: ""
+            soundDataUrl: "",
+            dayStartTime: "08:00",
+            dayEndTime: "22:00"
         };
     }
 
@@ -1160,12 +2039,16 @@ function loadSettings() {
 
         return {
             soundName: typeof parsedSettings.soundName === "string" ? parsedSettings.soundName : "",
-            soundDataUrl: typeof parsedSettings.soundDataUrl === "string" ? parsedSettings.soundDataUrl : ""
+            soundDataUrl: typeof parsedSettings.soundDataUrl === "string" ? parsedSettings.soundDataUrl : "",
+            dayStartTime: typeof parsedSettings.dayStartTime === "string" ? parsedSettings.dayStartTime : "08:00",
+            dayEndTime: typeof parsedSettings.dayEndTime === "string" ? parsedSettings.dayEndTime : "22:00"
         };
     } catch {
         return {
             soundName: "",
-            soundDataUrl: ""
+            soundDataUrl: "",
+            dayStartTime: "08:00",
+            dayEndTime: "22:00"
         };
     }
 }
@@ -1189,7 +2072,7 @@ function loadRemoteSession() {
 
 function loadSession() {
     try {
-        const savedSession = sessionStorage.getItem(SESSION_KEY);
+        const savedSession = localStorage.getItem(STORAGE_KEYS.session);
 
         if (!savedSession) {
             return null;
@@ -1207,6 +2090,10 @@ function loadSession() {
     }
 }
 
+function saveSession() {
+    localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(activeSession));
+}
+
 function syncSession() {
     if (remoteAuthEnabled) {
         if (!remoteSession?.access_token) {
@@ -1216,7 +2103,7 @@ function syncSession() {
     }
 
     if (!activeSession || !userProfile || activeSession.login !== userProfile.login) {
-        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(STORAGE_KEYS.session);
         activeSession = null;
     }
 }
@@ -1251,6 +2138,7 @@ function hideFeedback(element) {
     element.classList.remove("error");
 }
 
+
 function formatDateTime(timestamp) {
     return new Date(timestamp).toLocaleString("pt-BR", {
         day: "2-digit",
@@ -1259,6 +2147,30 @@ function formatDateTime(timestamp) {
         hour: "2-digit",
         minute: "2-digit"
     });
+}
+
+function formatReminderDuration(totalMinutes) {
+    const validMinutes = getValidReminderMinutes(totalMinutes);
+    const hours = Math.floor(validMinutes / 60);
+    const minutes = validMinutes % 60;
+    const parts = [];
+
+    if (hours > 0) {
+        parts.push(`${hours} hora${hours === 1 ? "" : "s"}`);
+    }
+
+    if (minutes > 0) {
+        parts.push(`${minutes} minuto${minutes === 1 ? "" : "s"}`);
+    }
+
+    return parts.join(" e ");
+}
+
+function formatCompactDuration(totalMinutes) {
+    const safeMinutes = Math.max(0, Math.round(totalMinutes));
+    const hours = Math.floor(safeMinutes / 60);
+    const minutes = safeMinutes % 60;
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 function getValidReminderMinutes(value) {
@@ -1272,6 +2184,7 @@ function convertMinutesToMs(minutes) {
 
 async function checkForUpdates() {
     try {
+        updateModal.hidden = true;
         const response = await fetch(`${UPDATE_INFO_URL}?t=${Date.now()}`, { cache: "no-store" });
 
         if (!response.ok) {
@@ -1288,14 +2201,33 @@ async function checkForUpdates() {
             return;
         }
 
-        updateMessage.textContent = `A versão ${updateInfo.version} já está disponível para instalação.`;
-        updateLink.href = typeof updateInfo.download_url === "string"
-            ? updateInfo.download_url
-            : "https://github.com/wellingtonJS1212/lista-de-atividades/releases/latest";
-        updateBanner.hidden = false;
+        const dismissedVersion = localStorage.getItem(DISMISSED_UPDATE_KEY);
+
+        if (dismissedVersion === updateInfo.version) {
+            return;
+        }
+
+        const updateNotes = typeof updateInfo.notes === "string" && updateInfo.notes.trim()
+            ? ` ${updateInfo.notes.trim()}`
+            : "";
+
+        updateMessage.textContent = `Você está na versão ${APP_VERSION}. A versão ${updateInfo.version} já está disponível para instalação.${updateNotes}`;
+        updateLink.href = DOWNLOAD_PAGE_URL;
+        dismissUpdateButton.dataset.version = updateInfo.version;
+        updateModal.hidden = false;
     } catch {
         // Segue silenciosamente se o arquivo remoto não estiver acessível.
     }
+}
+
+function dismissCurrentUpdate() {
+    const version = dismissUpdateButton.dataset.version;
+
+    if (version) {
+        localStorage.setItem(DISMISSED_UPDATE_KEY, version);
+    }
+
+    updateModal.hidden = true;
 }
 
 function compareVersions(versionA, versionB) {

@@ -1,5 +1,5 @@
 {
-    "version": "1.0.2",
-    "download_url": "https://github.com/wellingtonJS1212/lista-de-atividades/releases/download/v1.0.2/app-release-signed.apk",
-    "notes": "Versao final com fluxo local refinado, grafico melhorado, recuperacao local de senha, feedback no app e ajustes de interface."
+    "version": "1.0.5",
+    "download_url": "https://github.com/wellingtonJS1212/lista-de-atividades/releases/download/v1.0.5/app-release-signed.apk",
+    "notes": "PDF salvo direto em Downloads com confirmação visual, animações suaves na troca de abas, botões de ação redesenhados e filtros do gráfico lado a lado."
 }
